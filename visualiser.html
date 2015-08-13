@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+
+<head>
+
+
+ <style>
+
+
+
+ </style>
+
+<script src="visualiser.js"></script>
+<link rel="stylesheet" type="text/css" href="visualiser.css">
+<script src="jQuery.js"></script>
+
+</head>
+
+
+<body class="">
+
+<div class="lego-pane lego-pane--flex-none" id="app-form-no-optimizely">
+Optimizely is not setup on this page
+</div>
+<div class="lego-pane lego-pane--flex-none" id="app-form">
+
+<div> <input type="text" class="lego-text-input in-form" placeholder="Account" required="true" id="account-id" value="" /> </div>
+
+<div> <input type="text" class="lego-text-input in-form" placeholder="Token" required="true" id="token" value="d236ccadcb80b1aee0530567209fcba8:7dbc1e04"/> </div>
+<div> 
+	<select class="lego-select in-form" required="true" id="dataset">
+		<option value>Select your dataset</option>
+		<option value="10d" selected>10 days</option>
+		<option value="1m" >1 month</option>
+		<option value="3m" >3 months</option>
+		<option value="6m">6 months</option>
+		<option value="1y">1 year</option>
+	 </select>
+</div>
+
+
+<br />
+<button class="lego-button lego-button--highlight" id="start">Fetch data</button>
+<button class="lego-button lego-button--highlight" id="visualise-results">Visualise</button>
+
+
+<div class="lego-pane lego-data-sidebar" id="left-bar accordion__content">
+			<div id="pending-requests" class="sidebar-element ">
+				<label class="sidebar-label accordion__link">Pending Requests:&nbsp;&nbsp; <div></div></label>
+
+			</div>
+			<div id="active-experiments" class="sidebar-element ">
+				<label class="sidebar-label accordion__link">Active Experiments</label>
+				<ul id="active-experiments-lst">
+
+				</ul>
+			</div>
+			<div id="inactive-experiments" class="sidebar-element closed">
+				<label class="sidebar-label accordion__link closed">Inactive Experiments</label>
+				<ul id="inactive-experiments-lst">
+
+				</ul>
+			</div>
+			<div id="experiment-details" class="sidebar-element closed">
+				<label class="sidebar-label accordion__link ">Experiment details</label>
+				<div class="lego-sections__item" id="e_id"><label class="list-label">id</label><span /> </div>
+				<div class="lego-sections__item" id="e_url"><label class="list-label">Editor URL</label> <span /></div>
+				<div class="lego-sections__item" id="e_desc"><label class="list-label">Description</label> <span /></div>
+				<div class="lego-sections__item" id="e_res"><label class="list-label"><a href="#" id="editor-link" target="_blank">View experiment</a>&nbsp;&nbsp;<a href="#" id="res-link" target="_blank">View results</a></label></div>
+				<div class="lego-sections__item" id="e_codexx" ></div>
+				<div class="lego-sections__item" ><textarea rows="10" cols="80" id="e_code" class="list-label">
+
+				</textarea></div>
+			</div>
+
+			<!--div id="log" class="sidebar-element closed">
+				<label class="sidebar-label accordion__link ">Logs</label>
+
+			</div-->
+
+		</div>
+
+
+</div>
+
+
+
+
+
+
+</body>
+
+
+</html>
