@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -11,7 +11,10 @@
  </style>
 
 <script src="visualiser.js"></script>
+<link rel="stylesheet" type="text/css" href="https://app.optimizely.com/dist/css/app.css">
+
 <link rel="stylesheet" type="text/css" href="visualiser.css">
+
 <script src="jQuery.js"></script>
 
 </head>
@@ -24,9 +27,24 @@ Optimizely is not setup on this page
 </div>
 <div class="lego-pane lego-pane--flex-none" id="app-form">
 
-<div> <input type="text" class="lego-text-input in-form" placeholder="Account" required="true" id="account-id" value="" /> </div>
+<div> <input type="text" class="lego-text-input in-form" placeholder="Account" required="true" id="account-id" value="" readonly /> </div>
 
+<!-- evanscycles
 <div> <input type="text" class="lego-text-input in-form" placeholder="Token" required="true" id="token" value="d236ccadcb80b1aee0530567209fcba8:7dbc1e04"/> </div>
+silversea
+92f45ea27dac5efb1ce098f10ffab361:4c1cac7d
+nh hotels
+92df32805c1759ef2fa60b4c08bb4d0d:9c64f6ee
+canon europe
+ebe3ee83b693aef352fb32a6ee2a1ce3:e98d4e31
+secret escape
+abe8b7830645d57835d1b5fae9ff8d78:14375031
+moo.com
+df1d48394dedfabb6b54fd634e33c42f:b3d46d8a
+dominos
+8f3ff17366fea7170d83a7521fda51cd:37f15702
+-->
+<div> <input type="text" class="lego-text-input in-form" placeholder="Token" required="true" id="token" value=""/> </div>
 <div> 
 	<select class="lego-select in-form" required="true" id="dataset">
 		<option value>Select your dataset</option>
@@ -40,8 +58,12 @@ Optimizely is not setup on this page
 
 
 <br />
+<div id="error" ></div>
+<div id="info" ></div>
 <button class="lego-button lego-button--highlight" id="start">Fetch data</button>
 <button class="lego-button lego-button--highlight" id="visualise-results">Visualise</button>
+<button class="lego-button lego-button--highlight" id="clear-all">Clear All</button>
+
 
 
 <div class="lego-pane lego-data-sidebar" id="left-bar accordion__content">
@@ -68,7 +90,7 @@ Optimizely is not setup on this page
 				<div class="lego-sections__item" id="e_desc"><label class="list-label">Description</label> <span /></div>
 				<div class="lego-sections__item" id="e_res"><label class="list-label"><a href="#" id="editor-link" target="_blank">View experiment</a>&nbsp;&nbsp;<a href="#" id="res-link" target="_blank">View results</a></label></div>
 				<div class="lego-sections__item" id="e_codexx" ></div>
-				<div class="lego-sections__item" ><textarea rows="10" cols="80" id="e_code" class="list-label">
+				<div class="lego-sections__item" ><textarea rows="10" cols="80" id="e_code" >
 
 				</textarea></div>
 			</div>
@@ -85,7 +107,7 @@ Optimizely is not setup on this page
 
 
 
-
+<div class="lego-sections__item" id="enable-widget"> <div class="lego-button-group"> <button id="enable-visualiser" class="lego-button lego-button--highlight enable-toggle">On</button> <button id="disable-visualiser" class="lego-button enable-toggle">Off</button> </div> </div>
 
 
 </body>

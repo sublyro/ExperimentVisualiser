@@ -1,88 +1,161 @@
-chrome.extension.onRequest.addListener(function (details) {
-
-	$("#app-form-no-optimizely").hide();
-	$("#app-form").show();
-
-    setEventListeners();
-
-    $("#account-id").val(details[0].projectId);
-
-    $("#visualise-results").hide();
-    if ((localStorage[$("#account-id").val()]) !== undefined) {
-    	// we already have results for this site
-        $("#visualise-results").show();
-
-        tmp = JSON.parse(localStorage[$("#account-id").val()]);
-
-        var date = new Date(tmp.date);
-        var month = date.getUTCMonth() + 1; //months from 1-12
-        var day = date.getUTCDate();
-        var year = date.getUTCFullYear();
-        var seconds = date.getSeconds();
-        var minutes = date.getMinutes();
-        var hours = date.getHours();
-
-
-        newdate = day + "/" + month + "/" + year + " " + hours + ":" + minutes + ":" + seconds;
-
-        $("#dataset").val(tmp.datasetSize);
-
-        window.explorer = new ExperimentExplorer($("#token").val(), $("#account-id").val());
-        tmp = JSON.parse(localStorage[$("#account-id").val()]);
-        window.explorer.experiments = tmp.experiments;
-        window.explorer.dataset = tmp.dataset;
-        window.explorer.processingIndex = tmp.processingIndex;
-        window.explorer.totalExperiments = tmp.totalExperiments;
-        explorer.URL = "";
-        chrome.tabs.getSelected(null, function (tab) {
-            explorer.URL = tab.url;
-        });
-
-        var i = setInterval(function () {
-            if (explorer.URL != "") {
-                clearInterval(i);
-
-                window.explorer.clean();
-                $.each(window.explorer.experiments, function (key, ex) {
-                    if (ex != null) {
-                        window.explorer.visualiseResults(ex.id);
-                    }
-                });
-            }
-        }, 50);
-
-        $("<div id='last-updated'>Data last updated " + newdate + "</div>Data last refreshed on ").insertBefore("#start");
-
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    console.log('[visualiser] Got a message ' +request);
+    switch(request.type) {
+        case 'process_details':
+            process_details(JSON.parse(request));
+            break;
+        case 'enableVisualiser':
+            enableVisualiser();
+            break;
+        case 'disableVisualiser':
+            disableVisualiser();
+            break;
+        case 'refresh':
+            process_details(request);
+            setEventListeners();
+            break;
     }
 
-    $("#start").click(function () {
-        //$(".in-form").hide();
-        init();
-        chrome.tabs.getSelected(null, function (tab) {
-            explorer.URL = tab.url;
-        });
-        explorer.fetchExperiments();
+    /*request = JSON.parse(request);
+    console.log(request);
+    switch(request.type) {
+        case 'init':
+            // check if we already have data for this domain
+            console.log("Running init");
+            project_id = request.projectId;
+            console.log("Setting project Id to " +project_id);
+            ls = localStorage[request.projectId];
+            if (ls === undefined) {
+                console.log("Not initialised for this domain yet");
+                // do nothing
+            } else {
+                console.log("Starting viualisation: " +project_id);
+                sendResponse({projectId: project_id});
+            }
+            break;
+        case 'get_details':
+            console.log("Returning details: " +project_id);
+            sendResponse({projectId: project_id});
+            break;
+        default:
+            console.log("unknown message");
+    } */
 
-    });
-});
+  }
+);
 
+
+/**
+ * When the popup is loaded we request the project id from the background script and process the result accordingly
+ */
 document.addEventListener('DOMContentLoaded', function () {
 
-	$("#app-form").hide();
-    chrome.windows.getCurrent(function (currentWindow) {
-        chrome.tabs.query({
-            active: true,
-            windowId: currentWindow.id
-        }, function (activeTabs) {
-            chrome.tabs.executeScript(
-            activeTabs[0].id, {
-                file: 'get_details.js',
-                allFrames: true
-            });
-        });
-    });
+    console.log("Visualiser popup loaded");
+    $("#token").val(localStorage.getItem("token"));
+    sendMessageToBackgroundScript({type: 'get_details'}, process_details);
 });
 
+function process_details(response) {
+
+    console.log("process_details");
+    console.log(response);
+    // show the form 
+    console.log("Project id is " +response.projectId +" enabled?" +response.enabled);
+    if (response.enabled == false) {
+        disableVisualiser();
+    } else if (response.projectId != 0) {
+        //console.log("We alreasy have data for this domain");
+        $("#app-form-no-optimizely").hide();
+        $("#app-form").show();
+
+
+        setEventListeners();
+
+        $("#account-id").val(response.projectId);
+
+        $("#visualise-results, #clear-all").hide();
+        if ((localStorage[$("#account-id").val()] !== undefined) && (localStorage[$("#account-id").val()] !== '')) {
+            // we already have results for this domain
+            $("#visualise-results, #clear-all").show();
+
+            tmp = JSON.parse(localStorage[$("#account-id").val()]);
+
+            var date = new Date(tmp.date);
+            var month = date.getUTCMonth() + 1; //months from 1-12
+            var day = date.getUTCDate();
+            var year = date.getUTCFullYear();
+            var seconds = date.getSeconds();
+            var minutes = date.getMinutes();
+            var hours = date.getHours();
+
+
+            newdate = day + "/" + month + "/" + year + " " + hours + ":" + minutes + ":" + seconds;
+
+            $("#dataset").val(tmp.datasetSize != '' ? tmp.datasetSize : '10d');
+
+            window.explorer = new ExperimentExplorer($("#token").val(), $("#account-id").val());
+            tmp = JSON.parse(localStorage[$("#account-id").val()]);
+            window.explorer.experiments = tmp.experiments;
+            window.explorer.dataset = tmp.dataset;
+            window.explorer.processingIndex = tmp.processingIndex;
+            window.explorer.totalExperiments = tmp.totalExperiments;
+            explorer.URL = "";
+            chrome.tabs.getSelected(null, function (tab) {
+                explorer.URL = tab.url;
+            });
+
+            var i = setInterval(function () {
+                if (explorer.URL != "") {
+                    clearInterval(i);
+
+                    window.explorer.clean();
+                    $.each(window.explorer.experiments, function (key, ex) {
+                        if (ex != null) {
+                            window.explorer.visualiseResults(ex.id);
+                        }
+                    });
+                }
+            }, 50);
+
+            $("#info").html("Data last updated on" + newdate);
+
+        }
+
+        $("#start").click(function () {
+            init();
+            $("#info").html('');
+            chrome.tabs.getSelected(null, function (tab) {
+                explorer.URL = tab.url;
+            });
+            explorer.fetchExperiments();
+        });
+        
+    } else {
+        // optimizely is not setup on this page
+        $("#app-form-no-optimizely").show();
+        $("#app-form").hide();
+    }
+}
+
+
+function sendMessageToBackgroundScript(message, callback) {
+    //console.log("[visualiser] Sending message to background script..... " + message);
+    chrome.runtime.sendMessage(JSON.stringify(message), callback);
+}
+
+function sendMessageToContentScript(message) {
+        //console.log("[visualiser] Sending message to content script..... " + message);
+
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, JSON.stringify(message), function (response) {
+                console.log(response.farewell);
+            });
+        });
+}
 
 function setEventListeners() {
     $("body").delegate(".sidebar-element .accordion__link", "click", function () {
@@ -101,11 +174,12 @@ function setEventListeners() {
         });
         experiment = window.explorer.experiments[$(this).attr('id')];
         $("#e_id span").html(experiment.id);
+        // should we add optimizely_disable=true at the end of url?
         $("#e_url span").html("<a href=\"#\" class=\"iframe-url-link\">" + experiment.obj.edit_url + "</a>");
         $("#e_desc span").html(experiment.obj.description);
         $("#res-link").attr("href", "https://app.optimizely.com/results2?experiment_id=" + experiment.id);
         $("#editor-link").attr("href", "https://app.optimizely.com/edit?experiment_id=" + experiment.id);
-        //("#e_code").html(experiment.code);
+        $("#e_code").text(experiment.code);
         return false;
     });
 
@@ -129,12 +203,11 @@ function setEventListeners() {
         var url = $("#e_url a").html();
         if (url !== 'undefined' && url != '') {
             window.explorer.changeURL(url);
-            // TODO
             /* 
-			chrome.tabs.query({'active': true}, function(tabs) {
-			  chrome.tabs.update(tabs[0].id, {url: 'http://www.yahoo.fr'});
-			});
-			*/
+            chrome.tabs.query({'active': true}, function(tabs) {
+              chrome.tabs.update(tabs[0].id, {url: 'http://www.yahoo.fr'});
+            });
+            */
         }
         window.explorer.clean();
         return false;
@@ -167,6 +240,43 @@ function setEventListeners() {
         }, 50);
     });
 
+    $("body").delegate("#clear-all", "click", function () {
+        window.explorer.removeAllHighlights();
+    });
+
+    $("body").delegate("#enable-visualiser", "click", function() {
+        sendMessageToBackgroundScript({type: 'enable'}, enableVisualiser);
+    });
+
+    $("body").delegate("#disable-visualiser", "click", function() {
+        sendMessageToBackgroundScript({type: 'disable'}, disableVisualiser);
+        self.close();
+    });
+
+    $("#token").blur(function() {
+        localStorage.setItem("token", $("#token").val());
+    });
+
+}
+
+function enableVisualiser() {
+    sendMessageToBackgroundScript({type: 'get_details'}, process_details);
+    $(".lego-pane").show();
+    $("#enable-visualiser").addClass("lego-button--highlight");
+    $("#disable-visualiser").removeClass("lego-button--highlight");
+}
+
+function disableVisualiser() {
+    $(".lego-pane").hide();
+    localStorage.clear();
+    $("#disable-visualiser").addClass("lego-button--highlight");
+    $("#enable-visualiser").removeClass("lego-button--highlight");
+    $("body").delegate("#enable-visualiser", "click", function() {
+        sendMessageToBackgroundScript({type: 'enable'}, enableVisualiser);
+    });
+    var msg = new Object();
+    msg.type = 'removeAllHighlights';
+    sendMessageToContentScript(msg);
 }
 
 
@@ -179,6 +289,7 @@ Experiment = function (experiment) {
     this.code = "";
     this.index = 0;
     this.code = 0;
+    this.redirect = false;
 }
 
 ExperimentExplorer = function (token, projectId) {
@@ -192,6 +303,7 @@ ExperimentExplorer = function (token, projectId) {
     this.URL = "";
     this.date = "";
     this.datasetSize = "";
+    this.enabled = true;
 }
 
 
@@ -215,6 +327,7 @@ ExperimentExplorer.prototype = {
         $("#inactive-experiments-lst li").remove();
         $(".log-item").remove();
         $("#last-updated").remove();
+        $("#error").html('');
     },
 
     call: function (type, endpoint, data, success_callback, error_callback, param) {
@@ -257,7 +370,7 @@ ExperimentExplorer.prototype = {
 
 
     fetchExperiments: function () {
-        window.explorer.get("projects/" + window.explorer.projectId + "/experiments", window.explorer.postProcessExperiment, null, null);
+        window.explorer.get("projects/" + window.explorer.projectId + "/experiments", window.explorer.postProcessExperiment, window.explorer.postProcessExperimentError, window.explorer.projectId);
         window.explorer.date = new Date();
     },
 
@@ -265,7 +378,7 @@ ExperimentExplorer.prototype = {
         $("#pending-requests div:eq(0)").html(window.explorer.processingIndex);
         if (window.explorer.processingIndex == 0) {
             localStorage[window.explorer.projectId] = JSON.stringify(window.explorer);
-            $("#visualise-results").show();
+            $("#visualise-results, #clear-all").show();
         }
     },
 
@@ -284,6 +397,21 @@ ExperimentExplorer.prototype = {
             console.log(jqXhr);
             console.log('removing experiment ' + res + ' from array');
             window.explorer.experiments[res] = null;
+            $("#error").html("Error: " +jqXhr.message +" (experiment " +res +")");
+            localStorage[res] = '';
+            window.explorer.pushLog("Error: " +jqXhr.message +" (experiment " +res +")");
+        }
+    },
+
+    postProcessExperimentError: function (res, jqXhr) {
+        if (jqXhr.status == 403) {
+            $("#error").html("Connection refused. Make sure the token is valid");
+            localStorage[res] = '';
+            window.explorer.pushLog("Error: Connection refused. Make sure the token is valid");
+        } else {
+            $("#error").html("Error: " +jqXhr.message);
+            localStorage[res] = '';
+            window.explorer.pushLog("Error: " +jqXhr.message);
         }
     },
 
@@ -379,6 +507,15 @@ ExperimentExplorer.prototype = {
 
             var uplift = 0;
             var winning_variation = 0;
+
+            var personalisation = false;
+            if (experiment.obj.variation_ids.length == 1) {
+                personalisation = true;
+                winning_variation = experiment.obj.variation_ids[0];
+            }
+            window.explorer.experiments[experiment_id].personalisation = personalisation;
+            window.explorer.pushLog("Is personalisation? " + personalisation, experiment.index);
+
             if (experiment !== null) {
                 $.each(results, function (key, result) {
                     //console.log(result);
@@ -401,6 +538,7 @@ ExperimentExplorer.prototype = {
                 window.explorer.experiments[experiment_id].uplift = uplift;
 
                 // fetch the variation code to extract selectors
+                // TODO we might need to fetch variation 1 and not original
                 if (winning_variation !== 0) {
                     window.explorer.get("variations/" + winning_variation, window.explorer.postProcessVariation, uplift);
                 }
@@ -416,107 +554,36 @@ ExperimentExplorer.prototype = {
         window.explorer.pushLog("Process variation " + variation.id + " results for " + variation.experiment_id, experiment.index);
         if (variation.js_component != "") {
             experiment.code = variation.js_component;
-            var selectors = variation.js_component.match(/\$\(["'][^"']*["']\)/g);
-            if (selectors != null) {
-                $.each(selectors, function (key, s) {
-                    s = s.substring(3, s.length - 2);
-                    var add = true;
-                    for (i = 0; i < window.explorer.experiments[variation.experiment_id].selectors.length; i++) {
-                        if (window.explorer.experiments[variation.experiment_id].selectors[i] == s) {
-                            add = false;
-                        }
-                    }
-                    if (add == true) {
-                        window.explorer.pushLog("Found selector " + s + " for variation " + variation.id, experiment.index);
-                        window.explorer.experiments[variation.experiment_id].selectors.push(s);
-                    }
-                });
+            // check if this is a redirect experiment
+            if (experiment.code.indexOf("_optimizely_redirect") > -1) {
+                // this is a redirect experiment
+                experiment.redirect = true;
             } else {
-                window.explorer.pushLog("Found no selector for variation " + variation.id, experiment.index);
+                var selectors = variation.js_component.match(/\$y?\(["'][^"']*["']\)/g);
+                if (selectors != null) {
+                    $.each(selectors, function (key, s) {
+                        s = s.substring(3, s.length - 2);
+                        if (s != "body" && s != "head") {
+                            var add = true;
+                            for (i = 0; i < window.explorer.experiments[variation.experiment_id].selectors.length; i++) {
+                                if (window.explorer.experiments[variation.experiment_id].selectors[i] == s) {
+                                    add = false;
+                                }
+                            }
+                            if (add == true) {
+                                window.explorer.pushLog("Found selector " + s + " for variation " + variation.id, experiment.index);
+                                window.explorer.experiments[variation.experiment_id].selectors.push(s);
+                            }
+                        }
+                    });
+                } else {
+                    window.explorer.pushLog("Found no selector for variation " + variation.id, experiment.index);
+                }
             }
         } else {
             window.explorer.pushLog("Found no variation code for variation " + variation.id, experiment.index);
         }
         window.explorer.visualiseResults(variation.experiment_id);
-    },
-
-    buildExperimentResultLink: function (experiment) {
-        if (experiment.uplift > 0) {
-            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link green-link'>" + experiment.obj.description + " (" + experiment.uplift + "%)</a>";
-        } else if (experiment.uplift < 0) {
-            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link red-link'>" + experiment.obj.description + " (" + experiment.uplift + "%)</a>";
-        } else {
-            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link blue-link'>" + experiment.obj.description + "</a>";
-        }
-    },
-
-    highlightElements: function (id, selector, color) {
-        console.log("posting message[highlightElements]... " + selector);
-        var code = "e = $('" + selector + "');if (e !== 'undefined' && e.position() !== undefined && e.length > 0 && e.is(':visible')) { $.each(e, function (ek, ev) { if ($(this).context.localName != 'html') { if ($(this).next('.optlyMarkup').length == 0) { $('<div class=\"optlyMarkup " + id + "\"><p class=\"uplift\" style=\"visibility:hidden\">" + id + "</p></div>').insertAfter($(this)) .css({ 'visibility': 'visible', 'color': 'red', 'border-color': '" + color + "', 'border-width': '3px', 'border-style': 'solid', 'z-index': '9999', 'width': $(this).width() + 10, 'height': $(this).height() + 10, 'top': ($(this).position().top - 5) + 'px', 'left': ($(this).position().left - 5) + 'px', 'position': 'absolute' }); } else { $(this).next('.optlyMarkup').append('<p class=\"uplift\" style=\"visibility:hidden\">" + id + "</p>'); $(this).next('.optlyMarkup').addClass(" + id + "); } } else { console.log('Cannot add element on top level html element'); } }); }";
-        console.log(code);
-
-
-        chrome.tabs.executeScript(null, {
-            file: "jQuery.js"
-        }, function () {
-            chrome.tabs.executeScript(null, {
-                code: code
-            });
-        });
-    },
-
-    /*highlightElementsInIframe: function(id, selector, color) {
-    	console.log("posting message[highlightElementsInIframe]... " +selector); 
-    	var msg = "highlight&" +selector + "&" +id +"&" +color;
-    	$.postMessage(msg, window.explorer.iframeURL, $('#embedded-site-0').get(0).contentWindow); 
-    },*/
-
-    changeURL: function (url) {
-        console.log("posting message[changeURL]... ");
-        var code = "window.location='" + url + "';";
-        chrome.tabs.executeScript(null, {
-            code: code
-        });
-    },
-
-    removeAllHighlights: function () {
-        console.log("posting message[removeAllHighlights]... ");
-        var code = "$('.optlyMarkup').remove();";
-        chrome.tabs.executeScript(null, {
-            code: code
-        });
-    },
-
-    fillBox: function (selector) {
-        console.log("posting message[fillBox]... " + selector);
-        var code = "$('" + selector + "').css({'background-color':$('" + selector + "').css('border-color'),'z-index':'999999'});";
-        chrome.tabs.executeScript(null, {
-            code: code
-        });
-    },
-
-    emptyBox: function (selector) {
-        console.log("posting message[emptyBox]... " + selector);
-        var code = "$('" + selector + "').css({'background-color':'','z-index':'9999'});";
-        chrome.tabs.executeScript(null, {
-            code: code
-        });
-    },
-
-    showHighlight: function (selector) {
-        console.log("posting message[showHighlight]... " + selector);
-        var code = "$('" + selector + "').show();";
-        chrome.tabs.executeScript(null, {
-            code: code
-        });
-    },
-
-    hideHighlight: function (selector) {
-        console.log("posting message[showHighlight]... " + selector);
-        var code = "$('" + selector + "').hide();";
-        chrome.tabs.executeScript(null, {
-            code: code
-        });
     },
 
     visualiseResults: function (experiment_id) {
@@ -532,40 +599,121 @@ ExperimentExplorer.prototype = {
             }
         });
         if (found_page && experiment.selectors != null) {
-            $("#active-experiments-lst").append("<li><input type=\"checkbox\" class=\"cb\" checked>" + window.explorer.buildExperimentResultLink(experiment) + "<li>");
+            // the experiment ran on the current page
+            $("#active-experiments-lst").append("<li><input type=\"checkbox\" class=\"cb\" checked>" + window.explorer.buildExperimentResultLink(experiment) +(experiment.redirect == true ? " (redirect)" : "") +"<li>");
             var color = "blue";
             if (experiment.uplift < 0) {
                 color = "red";
             } else if (experiment.uplift > 0) {
                 color = "green";
             }
+            if (experiment.personalisation == true) {
+                color = "orange";
+            }
 
             for (i = 0; i < experiment.selectors.length; i++) {
-                tab_index = 0;
+                //tab_index = 0;
                 window.explorer.highlightElements(experiment.id, window.explorer.experiments[experiment_id].selectors[i], color);
             }
         } else {
+            // the experiment did not run on the current page
             $("#inactive-experiments-lst").append("<li>" + window.explorer.buildExperimentResultLink(experiment) + "<li>");
         }
-
-        /*if (window.explorer.processingIndex == 0) {
-            $("#visualise-results").css({
-                'display': 'block',
-                'visibility': 'visible'
-            });
-            $("#pending-requests label").remove();
-        }*/
     },
 
-    /*processIncomingMessage: function() {
-		$.receiveMessage(
-			function(e){
-				var msg = e.data.split("&");
-				if (msg[0] == 'url') {
-					window.explorer.setIFrameURL(msg[1]);
-				}
-			}
-		);
-    },*/
+    buildExperimentResultLink: function (experiment) {
+        if (experiment.personalisation == true) {
+            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link yellow-link'>" + experiment.obj.description + "</a>";
+        }
+        if (experiment.uplift > 0) {
+            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link green-link'>" + experiment.obj.description + " (" + experiment.uplift + "%)</a>";
+        } else if (experiment.uplift < 0) {
+            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link red-link'>" + experiment.obj.description + " (" + experiment.uplift + "%)</a>";
+        } else {
+            return "<a href='#' target='_blank' id='" + experiment.id + "' class='experiment-link blue-link'>" + experiment.obj.description + "</a>";
+        }
+    },
+
+    highlightElements: function (id, selector, color) {
+        var msg = new Object();
+        msg.type = 'highlight';
+        msg.selector = selector;
+        msg.color = color;
+        msg.id = id;
+        sendMessageToContentScript(msg);
+    },
+
+    changeURL: function (url) {
+        console.log("posting message[changeURL]... ");
+        var code = "window.location='" + url + "';";
+        chrome.tabs.executeScript(null, {
+            code: code
+        });
+    },
+
+    removeAllHighlights: function () {
+        var msg = new Object();
+        msg.type = 'removeAllHighlights';
+        sendMessageToContentScript(msg);
+    },
+
+    fillBox: function (selector) {
+        /*console.log("posting message[fillBox]... " + selector);
+        var code = "$('" + selector + "').css({'background-color':$('" + selector + "').css('border-color'),'z-index':'999999'});";
+        chrome.tabs.executeScript(null, {
+            code: code
+        });*/
+        var msg = new Object();
+        msg.type = 'fillBox';
+        msg.selector = selector;
+        sendMessageToContentScript(msg);
+    },
+
+    emptyBox: function (selector) {
+        /*console.log("posting message[emptyBox]... " + selector);
+        var code = "$('" + selector + "').css({'background-color':'','z-index':'9999'});";
+        chrome.tabs.executeScript(null, {
+            code: code
+        });*/
+        var msg = new Object();
+        msg.type = 'emptyBox';
+        msg.selector = selector;
+        sendMessageToContentScript(msg);
+    },
+
+    showHighlight: function (selector) {
+        /*console.log("posting message[showHighlight]... " + selector);
+        var code = "$('" + selector + "').show();";
+        chrome.tabs.executeScript(null, {
+            code: code
+        });*/
+        var msg = new Object();
+        msg.type = 'showHighlight';
+        msg.selector = selector;
+        sendMessageToContentScript(msg);
+    },
+
+    hideHighlight: function (selector) {
+        /*console.log("posting message[showHighlight]... " + selector);
+        var code = "$('" + selector + "').hide();";
+        chrome.tabs.executeScript(null, {
+            code: code
+        });*/
+        var msg = new Object();
+        msg.type = 'hideHighlight';
+        msg.selector = selector;
+        sendMessageToContentScript(msg);
+    },
+
+    /*clearAll: function () {
+        console.log("posting message[clearAll]... ");
+        $('li input').removeAttr( 'checked')
+        var code = "$('.optlyMarkup').remove();";
+        chrome.tabs.executeScript(null, {
+            code: code
+        });
+    },
+*/
+    
 
 }

@@ -1,5 +1,7 @@
-var projectId = 0;
+/*var projectId = 0;
 var details = [];
+
+console.log("get_details.js script is running");
 
 var scripts = [].slice.apply(document.getElementsByTagName('script'));
 script = scripts.map(function(element) {
@@ -13,4 +15,4 @@ if (projectId != 0) {
   var details = [];
   details.push({projectId: projectId});
   chrome.extension.sendRequest(details);
-}
+}*/

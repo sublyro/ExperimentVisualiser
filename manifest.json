@@ -8,15 +8,16 @@
     "tabs", "http://*/*", "https://*/*"
   ],
   "content_scripts": [
-    {
-      "matches": ["*://*/*"],
-      "js": ["jQuery.js", "visualiser.js"]
-    }
+    { "matches": ["http://*/*", "https://*/*"], "js": ["jQuery.js", "content_script.js"], "run_at": "document_end" }
   ],
   "browser_action": {
       "default_title": "Experiment Visualiser",
       "default_icon": "icon16.png",
       "default_popup": "visualiser.html"
   },
+  "background": {
+    "scripts": ["jquery.js", "background.js"]
+  },
+
   "manifest_version": 2
 }
